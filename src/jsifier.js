@@ -120,9 +120,11 @@ function JSify(data, functionsOnly) {
   }
 
   function processLibraryFunction(snippet, ident, finalName) {
-    // It is possible that when printing the function as a string on Windows, the js interpreter we are in returns the string with Windows
-    // line endings \r\n. This is undesirable, since line endings are managed in the form \n in the output for binary file writes, so
-    // make sure the endings are uniform.
+    // It is possible that when printing the function as a string on Windows,
+    // the js interpreter we are in returns the string with Windows line endings
+    // \r\n. This is undesirable, since line endings are managed in the form \n
+    // in the output for binary file writes, so make sure the endings are
+    // uniform.
     snippet = snippet.toString().replace(/\r\n/gm,"\n");
     assert(snippet.indexOf('XXX missing C define') == -1,
            'Trying to include a library function with missing C defines: ' + finalName + ' | ' + snippet);
@@ -206,8 +208,8 @@ function JSify(data, functionsOnly) {
           var target = (MAIN_MODULE ? '' : 'parent') + "Module['_" + ident + "']";
           var assertion = '';
           if (ASSERTIONS)
-            assertion = 'if (!' + target + ') abort("external function \'' + ident + '\' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");';
-          LibraryManager.library[ident] = new Function(assertion + "return " + target + ".apply(null, arguments);");
+            assertion = '  if (!' + target + ') abort("external function \'' + ident + '\' is missing. perhaps a side module was not linked in? if this function was expected to arrive from a system library, try to build the MAIN_MODULE with EMCC_FORCE_STDLIBS=1 in the environment");\n';
+          LibraryManager.library[ident] = new Function(assertion + "  return " + target + ".apply(null, arguments);");
           if (SIDE_MODULE) {
             // no dependencies, just emit the thunk
             Functions.libraryFunctions[finalName] = 1;
@@ -306,9 +308,9 @@ function JSify(data, functionsOnly) {
         }
       } else if (typeof snippet === 'string' && snippet.indexOf(';') == 0) {
         contentText = 'var ' + finalName + snippet;
-        if (snippet[snippet.length-1] != ';' && snippet[snippet.length-1] != '}') contentText += ';';
+        if (snippet[snippet.length-1] != ';' && snippet[snippet.length-1] != '}') contentText += ';\n';
       } else {
-        contentText = 'var ' + finalName + '=' + snippet + ';';
+        contentText = 'var ' + finalName + '=' + snippet + ';\n';
       }
       var sig = LibraryManager.library[ident + '__sig'];
       if (isFunction && sig && LibraryManager.library[ident + '__asm']) {
@@ -322,7 +324,9 @@ function JSify(data, functionsOnly) {
       // asm module exports are done in emscripten.py, after the asm module is ready. Here
       // we also export library methods as necessary.
       if ((EXPORT_ALL || (finalName in EXPORTED_FUNCTIONS)) && !noExport) {
-        contentText += '\nModule["' + finalName + '"] = ' + finalName + ';';
+        printErr('EXPORT ' + finalName);
+        contentText += '\nModule["' + finalName + 'XXXX"] = ' + finalName + ';';
+
       }
       if (!LibraryManager.library[ident + '__asm']) {
         // If we are not an asm library func, and we have a dep that is, then we need to call
